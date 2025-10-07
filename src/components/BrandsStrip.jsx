@@ -1,26 +1,34 @@
 // src/components/BrandsStrip.jsx
+import { Link } from "react-router-dom";
+
+const slug = (s) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+const BRANDS = [
+  "Khaadi",
+  "Gul Ahmed",
+  "Sapphire",
+  "Alkaram",
+  "J. (Junaid Jamshed)",
+  "Outfitters",
+  "Limelight",
+  "Nishat Linen",
+  "Sana Safinaz",
+  "Bonanza Satrangi",
+  "Bata",
+  "Servis",
+];
+
 export default function BrandsStrip() {
-  const brands = [
-    "Khaadi",
-    "Gul Ahmed",
-    "Sapphire",
-    "Alkaram",
-    "J. (Junaid Jamshed)",
-    "Outfitters",
-    "Limelight",
-    "Nishat Linen",
-    "Sana Safinaz",
-    "Bonanza Satrangi",
-    "Bata",
-    "Servis",
-  ];
   return (
-    <div className="brands">
+    <nav className="brands" aria-label="Popular brands">
       <div className="brands__row">
-        {brands.map((b) => (
-          <span key={b} className="brand">{b}</span>
+        {BRANDS.map((b) => (
+          <Link key={b} className="brand" to={`/brand/${slug(b)}`}>
+            {b}
+          </Link>
         ))}
       </div>
-    </div>
+    </nav>
   );
 }

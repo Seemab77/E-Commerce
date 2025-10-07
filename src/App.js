@@ -2,15 +2,16 @@
 import "./App.css";
 import { Routes, Route } from "react-router-dom";
 
-// Layout Components
+import ScrollToTop from "./components/ScrollToTop";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
-// Pages
 import Home from "./pages/Home";
 import ProductPage from "./pages/ProductPage";
+import Brand from "./pages/Brand";
+import Checkout from "./pages/Checkout";
 
-// Category Pages
+// Categories
 import Women from "./pages/Women";
 import Men from "./pages/Men";
 import Kids from "./pages/Kids";
@@ -19,29 +20,33 @@ import Pret from "./pages/Pret";
 import Unstitched from "./pages/Unstitched";
 import Footwear from "./pages/Footwear";
 
-// 404 Fallback Page
+// Search
+import Search from "./pages/Search";
+
+// Cart
+import Cart from "./pages/Cart"; // (optional page)
+import { CartProvider } from "./context/CartContext";
+import CartDrawer from "./components/CartDrawer";
+
 function NotFound() {
   return (
-    <div className="section container" style={{ textAlign: "center", marginTop: "60px" }}>
+    <div className="section container" style={{ textAlign: "center", marginTop: 60 }}>
       <h2>404 — Page not found</h2>
       <p>The page you’re looking for doesn’t exist or has been moved.</p>
     </div>
   );
 }
 
-// Main App
 export default function App() {
   return (
-    <>
-      {/* Navbar visible on all pages */}
+    <CartProvider>
+      <ScrollToTop />
       <Navbar />
-
-      {/* All Routes */}
+      <CartDrawer /> {/* ⬅️ Drawer lives here once */}
       <Routes>
-        {/* Home */}
         <Route path="/" element={<Home />} />
 
-        {/* Category Pages */}
+        {/* Categories */}
         <Route path="/women" element={<Women />} />
         <Route path="/men" element={<Men />} />
         <Route path="/kids" element={<Kids />} />
@@ -49,16 +54,24 @@ export default function App() {
         <Route path="/pret" element={<Pret />} />
         <Route path="/unstitched" element={<Unstitched />} />
         <Route path="/footwear" element={<Footwear />} />
+        <Route path="/checkout" element={<Checkout />} />
+  
+        {/* Brand filter */}
+        <Route path="/brand/:slug" element={<Brand />} />
 
-        {/* Product Details Page */}
+        {/* Product details */}
         <Route path="/product/:id" element={<ProductPage />} />
 
-        {/* 404 Page */}
+        {/* Search */}
+        <Route path="/search" element={<Search />} />
+
+        {/* Optional dedicated cart page */}
+        <Route path="/cart" element={<Cart />} />
+
+        {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
-
-      {/* Footer visible on all pages */}
       <Footer />
-    </>
+    </CartProvider>
   );
 }
