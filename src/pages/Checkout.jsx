@@ -1,267 +1,231 @@
-// src/pages/Checkout.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCart } from "../context/CartContext";
-import { useAuth } from "../context/AuthContext";
-import { formatPKR } from "../utils/currency";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../lib/firebase";                 // <- your Firebase init
+import { useCart } from "../context/CartContext";     // items, subtotal, clear()
+import { useAuth } from "../context/AuthContext";     // user (or null)
 
-// Firestore (optional but recommended)
-import { db } from "../lib/firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+/** Create a readable, unique ID, e.g. ORD-20251014-AB3F2 */
+function generateOrderId() {
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, ""); // 20251014
+  const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase(); // AB3F2
+  return `ORD-${datePart}-${randomPart}`;
+}
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { items, clear } = useCart();
   const { user } = useAuth();
+  const { items, subtotal, clear } = useCart();
 
-  // ----- Delivery form state -----
-  const [form, setForm] = useState({
-    fullName: user?.displayName || "",
-    email: user?.email || "",
-    phone: "",
-    address: "",
-    city: "",
-    province: "",
-    postalCode: "",
-    notes: "",
-  });
+  // ---- Form fields ----
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState(user?.email || "");
+  const [city, setCity] = useState("");
+  const [province, setProvince] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [placing, setPlacing] = useState(false);
 
-  const onChange = (e) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
-  };
+  // shipping could be dynamic; keep it simple here
+  const shipping = 300;
+  const grandTotal = useMemo(() => Number(subtotal || 0) + shipping, [subtotal]);
 
-  // ----- Safely compute subtotal -----
-  const subtotal = useMemo(() => {
-    if (!Array.isArray(items)) return 0;
-    return items.reduce((sum, it) => sum + (Number(it.price) || 0) * (Number(it.qty) || 0), 0);
-  }, [items]);
+  useEffect(() => {
+    if (!user) return; // allow viewing but not placing orders if not logged in
+    // Pre-fill email if available
+    setEmail((prev) => prev || user.email || "");
+  }, [user]);
 
-  const shipping = 300; // flat rate
-  const grandTotal = subtotal + shipping;
+  const isFormValid =
+    fullName.trim().length > 1 &&
+    email.trim().length > 3 &&
+    phone.trim().length > 5 &&
+    city.trim().length > 1 &&
+    province.trim().length > 1 &&
+    postalCode.trim().length > 0 &&
+    address.trim().length > 4;
 
-  const disabled = !items?.length;
-
-  async function handlePlaceOrder(e) {
-    e.preventDefault();
-
-    // Basic validation
-    const required = ["fullName", "email", "phone", "address", "city", "province", "postalCode"];
-    for (const key of required) {
-      if (!String(form[key] || "").trim()) {
-        alert(`Please enter ${key.replace(/([A-Z])/g, " $1").toLowerCase()}.`);
-        return;
-      }
-    }
-    if (!items?.length) {
-      alert("Your cart is empty.");
+  async function handlePlaceOrder() {
+    if (!user) {
+      // if you prefer redirect right away:
+      navigate("/account", { state: { from: "/checkout" } });
       return;
     }
+    if (!items.length || !isFormValid) return;
 
-    // Build order object
-    const order = {
-      uid: user?.uid || null,
-      customer: {
-        fullName: form.fullName,
-        email: form.email,
-        phone: form.phone,
-        address: form.address,
-        city: form.city,
-        province: form.province,
-        postalCode: form.postalCode,
-        notes: form.notes || "",
-      },
-      items: items.map((it) => ({
-        id: it.id,
-        title: it.title,
-        price: Number(it.price) || 0,
-        qty: Number(it.qty) || 1,
-        image: it.image || "",
-      })),
-      amounts: {
-        subtotal,
+    setPlacing(true);
+    try {
+      const orderId = generateOrderId();
+
+      const orderDoc = {
+        orderId,                                // <- our unique, friendly id
+        uid: user.uid,
+        status: "pending",                      // you can update later to "paid", etc.
+        placedAt: serverTimestamp(),
+
+        delivery: {
+          fullName,
+          phone,
+          email,
+          city,
+          province,
+          postalCode,
+          address,
+          notes,
+        },
+
+        items: items.map((i) => ({
+          id: i.id,
+          title: i.title,
+          price: Number(i.price) || 0,
+          qty: Number(i.qty) || 0,
+          image: i.image || "",
+        })),
+
+        subtotal: Number(subtotal) || 0,
         shipping,
         grandTotal,
-        currency: "PKR",
-      },
-      status: "pending",
-      createdAt: serverTimestamp(),
-    };
+      };
 
-    try {
-      // Save order to Firestore
-      const docRef = await addDoc(collection(db, "orders"), order);
+      await addDoc(collection(db, "orders"), orderDoc);
 
-      // Clear cart & go to success page
+      // clear cart and go to success page with a bit of context
       clear();
-      navigate(`/order-success?order=${docRef.id}`);
+      navigate("/order-success", {
+        state: {
+          orderId,
+          fullName,
+          grandTotal,
+        },
+        replace: true,
+      });
     } catch (err) {
       console.error(err);
       alert("Could not place order. Please try again.");
+    } finally {
+      setPlacing(false);
     }
   }
 
   return (
-    <div className="container section" style={{ maxWidth: 1100 }}>
-      <h1 style={{ marginBottom: 18 }}>Checkout</h1>
+    <div className="container section" style={{ maxWidth: 960 }}>
+      <h1>Checkout</h1>
 
-      {/* Layout: left = form, right = summary */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 20 }}>
-        {/* ===== Delivery Form ===== */}
-        <form onSubmit={handlePlaceOrder}>
-          <div className="card" style={{ padding: 16, marginBottom: 20 }}>
-            <h3 style={{ margin: "0 0 12px" }}>Delivery details</h3>
+      {/* ---- Delivery form ---- */}
+      <div className="card" style={{ padding: 16, marginTop: 12 }}>
+        <h3>Delivery details</h3>
 
-            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <label>Full name</label>
-                <input
-                  name="fullName"
-                  value={form.fullName}
-                  onChange={onChange}
-                  placeholder="e.g., Seemab Ramzan"
-                  required
-                />
-              </div>
-              <div>
-                <label>Phone</label>
-                <input
-                  name="phone"
-                  value={form.phone}
-                  onChange={onChange}
-                  placeholder="03xx-xxxxxxx"
-                  required
-                />
-              </div>
-              <div>
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={onChange}
-                  placeholder="you@example.com"
-                  required
-                />
-              </div>
-              <div>
-                <label>City</label>
-                <input
-                  name="city"
-                  value={form.city}
-                  onChange={onChange}
-                  placeholder="City"
-                  required
-                />
-              </div>
-              <div>
-                <label>Province</label>
-                <input
-                  name="province"
-                  value={form.province}
-                  onChange={onChange}
-                  placeholder="Punjab / Sindh / KPK / Balochistan / GB / AJK"
-                  required
-                />
-              </div>
-              <div>
-                <label>Postal code</label>
-                <input
-                  name="postalCode"
-                  value={form.postalCode}
-                  onChange={onChange}
-                  placeholder="e.g., 54000"
-                  required
-                />
-              </div>
-            </div>
+        <div className="grid" style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr 1fr" }}>
+          <label>
+            Full name
+            <input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          </label>
+          <label>
+            Phone
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </label>
+          <label>
+            Email
+            <input value={email} onChange={(e) => setEmail(e.target.value)} />
+          </label>
+          <label>
+            City
+            <input value={city} onChange={(e) => setCity(e.target.value)} />
+          </label>
+          <label>
+            Province
+            <input value={province} onChange={(e) => setProvince(e.target.value)} />
+          </label>
+          <label>
+            Postal code
+            <input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
+          </label>
+        </div>
 
-            <div style={{ marginTop: 12 }}>
-              <label>Address</label>
-              <textarea
-                name="address"
-                value={form.address}
-                onChange={onChange}
-                rows={3}
-                placeholder="House / Street / Area"
-                required
-              />
-            </div>
+        <label style={{ display: "block", marginTop: 8 }}>
+          Address
+          <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={3} />
+        </label>
 
-            <div style={{ marginTop: 12 }}>
-              <label>Order notes (optional)</label>
-              <textarea
-                name="notes"
-                value={form.notes}
-                onChange={onChange}
-                rows={2}
-                placeholder="Any delivery instructions…"
-              />
-            </div>
-          </div>
+        <label style={{ display: "block", marginTop: 8 }}>
+          Order notes (optional)
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+        </label>
+      </div>
 
-          {/* Cart items (summary on the left as well) */}
-          <div className="card" style={{ padding: 16 }}>
-            <h3 style={{ margin: "0 0 12px" }}>Your items</h3>
-            {!items?.length ? (
-              <p>Your cart is empty.</p>
-            ) : (
-              items.map((it) => (
-                <div
-                  key={it.id}
-                  style={{ display: "grid", gridTemplateColumns: "80px 1fr 60px 120px", gap: 12, alignItems: "center", padding: "10px 0", borderBottom: "1px solid #eee" }}
-                >
-                  <img src={it.image} alt={it.title} style={{ width: 70, height: 70, objectFit: "cover", borderRadius: 8 }} />
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{it.title}</div>
-                    <div style={{ color: "#64748b" }}>{formatPKR(it.price)}</div>
-                  </div>
-                  <div style={{ textAlign: "center" }}>x{it.qty}</div>
-                  <div style={{ textAlign: "right", fontWeight: 600 }}>
-                    {formatPKR((Number(it.price) || 0) * (Number(it.qty) || 0))}
-                  </div>
+      {/* ---- Order summary ---- */}
+      <div className="card" style={{ padding: 16, marginTop: 12 }}>
+        <h3>Your items</h3>
+
+        {items.length === 0 ? (
+          <p>Your cart is empty.</p>
+        ) : (
+          <div style={{ display: "grid", gap: 12 }}>
+            {items.map((it) => (
+              <div
+                key={it.id}
+                style={{
+                  display: "grid",
+                  gap: 12,
+                  gridTemplateColumns: "72px 1fr auto",
+                  alignItems: "center",
+                }}
+              >
+                <img src={it.image} alt={it.title} style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8 }} />
+                <div>
+                  <div style={{ fontWeight: 600 }}>{it.title}</div>
+                  <div style={{ color: "#64748b" }}>Qty: {it.qty}</div>
                 </div>
-              ))
-            )}
+                <div style={{ fontWeight: 600 }}>Rs {Number(it.price || 0).toLocaleString()}</div>
+              </div>
+            ))}
           </div>
+        )}
 
-          {/* Submit button (shown on mobile naturally) */}
-          <div style={{ marginTop: 16 }}>
-            <button className="btn btn--primary" disabled={disabled}>
-              Place Order
+        <hr style={{ margin: "16px 0" }} />
+
+        <div style={{ display: "grid", gap: 6 }}>
+          <Row label="Subtotal" value={`Rs ${Number(subtotal).toLocaleString()}`} />
+          <Row label="Shipping" value={`Rs ${shipping.toLocaleString()}`} />
+          <Row label="Grand total" value={`Rs ${grandTotal.toLocaleString()}`} bold />
+        </div>
+
+        {!user && (
+          <div style={{ color: "#b91c1c", marginTop: 12 }}>
+            You must be logged in to place an order.
+            <br />
+            <button
+              className="btn btn--primary"
+              style={{ marginTop: 8 }}
+              onClick={() => navigate("/account", { state: { from: "/checkout" } })}
+            >
+              Log in to place order
             </button>
           </div>
-        </form>
+        )}
 
-        {/* ===== Order Summary (right) ===== */}
-        <aside className="card" style={{ padding: 16, height: "fit-content", position: "sticky", top: 16 }}>
-          <h3 style={{ margin: "0 0 12px" }}>Summary</h3>
-          <div style={{ display: "grid", gap: 8 }}>
-            <Row label="Subtotal" value={formatPKR(subtotal)} />
-            <Row label="Shipping" value={formatPKR(shipping)} />
-            <hr />
-            <Row label="Grand Total" value={formatPKR(grandTotal)} strong />
-          </div>
-
+        <div style={{ marginTop: 14 }}>
           <button
-            style={{ marginTop: 16, width: "100%" }}
             className="btn btn--primary"
+            disabled={!user || !items.length || !isFormValid || placing}
             onClick={handlePlaceOrder}
-            disabled={disabled}
           >
-            Place Order
+            {placing ? "Placing..." : "Place Order"}
           </button>
-        </aside>
+        </div>
       </div>
     </div>
   );
 }
 
-function Row({ label, value, strong }) {
+/** Small display helper */
+function Row({ label, value, bold }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between" }}>
-      <span style={{ color: "#475569" }}>{label}</span>
-      <span style={{ fontWeight: strong ? 800 : 600 }}>{value}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: bold ? 700 : 500 }}>
+      <span>{label}</span>
+      <span>{value}</span>
     </div>
   );
 }
