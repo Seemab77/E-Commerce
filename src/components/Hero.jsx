@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import heroImg from "../assets/Hero.jpg"; // make sure this file exists
+import heroImg from "../assets/Hero.png"; // make sure this file exists
 
 export default function Hero() {
   const navigate = useNavigate();

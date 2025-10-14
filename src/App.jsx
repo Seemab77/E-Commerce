@@ -10,6 +10,7 @@ import Home from "./pages/Home";
 import ProductPage from "./pages/ProductPage";
 import Brand from "./pages/Brand";
 import Checkout from "./pages/Checkout";
+import AuthPage from "./pages/AuthPage";
 
 // Categories
 import Women from "./pages/Women";
@@ -19,6 +20,9 @@ import Lawn from "./pages/Lawn";
 import Pret from "./pages/Pret";
 import Unstitched from "./pages/Unstitched";
 import Footwear from "./pages/Footwear";
+import Account from "./pages/Account";
+import OrderSuccess from "./pages/OrderSuccess";
+import RequireAuth from "./components/RequireAuth";
 
 // Search
 import Search from "./pages/Search";
@@ -55,6 +59,11 @@ export default function App() {
         <Route path="/unstitched" element={<Unstitched />} />
         <Route path="/footwear" element={<Footwear />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/account" element={<Account />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
+        <Route path="/checkout" element={<RequireAuth> <Checkout /></RequireAuth>} />
+
   
         {/* Brand filter */}
         <Route path="/brand/:slug" element={<Brand />} />

@@ -28,7 +28,7 @@ export default function Navbar() {
     <header className="nav">
       <div className="nav__container">
         <Link to="/" className="nav__logo" onClick={closeMenu}>
-          SHOP.CO
+          SEEMAB
         </Link>
 
         {/* Desktop Nav Links */}
@@ -56,8 +56,15 @@ export default function Navbar() {
           </div>
 
           {/* Profile (placeholder) */}
-          <button className="icon" aria-label="Profile">
-            <FaUser />
+          
+          <button 
+          type="button"
+            className="icon-btn"
+            aria-label="Profile"
+            onClick={() => navigate("/account")}
+            title="Profile"
+          >
+           <FaUser className="icon" onClick={() => navigate("/auth")} />
           </button>
 
           {/* CART: opens the cart drawer */}
