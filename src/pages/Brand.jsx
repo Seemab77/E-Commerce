@@ -1,57 +1,65 @@
 // src/pages/Brand.jsx
-import React, { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { allProducts } from "../data/products"; // match your file name/casing
-
-const slugify = (s) => s?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
-const deslug = (s) =>
-  s.replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/\bJunaid Jamshed\b/i, "J. (Junaid Jamshed)");
-
-const formatPKR = (n) =>
-  new Intl.NumberFormat("en-PK", {
-    style: "currency",
-    currency: "PKR",
-    maximumFractionDigits: 0,
-  }).format(n ?? 0);
+import { getProductsByCategorySlug } from "../lib/fakestore";
+import { formatPKR } from "../utils/currency";
+import { useCart } from "../context/CartContext";
 
 export default function Brand() {
-  const { slug } = useParams();
-  const title = deslug(slug);
+  const { slug } = useParams();         // e.g. "men's clothing"
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { addItem, openCart } = useCart();
 
-  const products = useMemo(
-    () => allProducts.filter((p) => slugify(p.brand) === slug),
-    [slug]
-  );
+  useEffect(() => {
+    setLoading(true);
+    getProductsByCategorySlug(slug)
+      .then(setItems)
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  const handleAdd = (p) => {
+    addItem({ id: p.id, title: p.title, price: p.price, image: p.image, qty: 1 });
+    openCart();
+  };
+
+  if (loading) return <div className="container section">Loading…</div>;
 
   return (
-    <div className="section container">
-      <h2 style={{ marginBottom: 8 }}>{title}</h2>
-      <p style={{ color: "#64748b", marginBottom: 16 }}>
-        {products.length} item{products.length !== 1 ? "s" : ""} found
-      </p>
+    <div className="container section">
+      <h1 className="section__title">Category: {slug}</h1>
 
-      {products.length === 0 ? (
-        <p>No products for this brand yet.</p>
-      ) : (
-        <div className="grid">
-          {products.map((p) => (
-            <article key={p.id} className="card">
-              <Link to={`/product/${p.id}`} className="card__link">
-                <img src={p.image} alt={p.title} loading="lazy" />
-                <div className="card__body">
-                  <h4 className="card__title">{p.title}</h4>
-                  <div className="card__price">
-                    <strong>{formatPKR(p.price)}</strong>
-                    {p.oldPrice && <span className="old">{formatPKR(p.oldPrice)}</span>}
-                  </div>
+      {!items.length && <p>No products found.</p>}
+
+      <div className="grid">
+        {items.map((p) => (
+          <article key={p.id} className="card">
+            <Link to={`/product/${p.id}`} className="card__link">
+              <img src={p.image} alt={p.title} loading="lazy" />
+            </Link>
+            <div className="card__body">
+              <Link to={`/product/${p.id}`} className="card__title">{p.title}</Link>
+              {p.rating?.rate && (
+                <div className="stars">
+                  {"★".repeat(Math.round(p.rating.rate))}
+                  {"☆".repeat(5 - Math.round(p.rating.rate))}
+                  <span className="stars__num">({p.rating.rate.toFixed(1)})</span>
                 </div>
-              </Link>
-            </article>
-          ))}
-        </div>
-      )}
+              )}
+              <div className="card__price">
+                <strong>{formatPKR(p.price)}</strong>
+                {p.oldPrice && <span className="old">{formatPKR(p.oldPrice)}</span>}
+              </div>
+              <div className="card__actions">
+                <button className="btn btn--primary" onClick={() => handleAdd(p)}>
+                  Add to Cart
+                </button>
+                <Link to={`/product/${p.id}`} className="btn btn--ghost">View</Link>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

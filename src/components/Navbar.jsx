@@ -1,17 +1,26 @@
 // src/components/Navbar.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { FaSearch, FaUser, FaShoppingCart, FaBars, FaTimes } from "react-icons/fa";
 import { useCart } from "../context/CartContext";
+import { getCategories, toSlug } from "../lib/fakestore";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [cats, setCats] = useState([]);     // dynamic categories
   const navigate = useNavigate();
 
-  // Cart context: open the drawer + items for the badge
   const { openCart, items } = useCart();
   const itemCount = items.reduce((sum, it) => sum + (it.qty || 1), 0);
+
+  useEffect(() => {
+    let alive = true;
+    getCategories()
+      .then((list) => alive && setCats(list))
+      .catch(() => setCats([]));
+    return () => { alive = false; };
+  }, []);
 
   const toggleMenu = () => setMenuOpen((v) => !v);
   const closeMenu = () => setMenuOpen(false);
@@ -31,15 +40,13 @@ export default function Navbar() {
           SEEMAB
         </Link>
 
-        {/* Desktop Nav Links */}
+        {/* Desktop Nav Links (built from FakeStore categories) */}
         <nav className="nav__links">
-          <NavLink to="/women">Women</NavLink>
-          <NavLink to="/men">Men</NavLink>
-          <NavLink to="/kids">Kids</NavLink>
-          <NavLink to="/lawn">Lawn</NavLink>
-          <NavLink to="/pret">Pret</NavLink>
-          <NavLink to="/unstitched">Unstitched</NavLink>
-          <NavLink to="/footwear">Footwear</NavLink>
+          {cats.map((c) => (
+            <NavLink key={c} to={`/category/${toSlug(c)}`} onClick={closeMenu}>
+              {c.replace(/^\w/, (m) => m.toUpperCase())}
+            </NavLink>
+          ))}
         </nav>
 
         {/* Right Icons */}
@@ -55,16 +62,15 @@ export default function Navbar() {
             />
           </div>
 
-          {/* Profile (placeholder) */}
-          
-          <button 
-          type="button"
+          {/* Profile */}
+          <button
+            type="button"
             className="icon-btn"
             aria-label="Profile"
             onClick={() => navigate("/account")}
             title="Profile"
           >
-           <FaUser className="icon" onClick={() => navigate("/auth")} />
+            <FaUser className="icon" onClick={() => navigate("/auth")} />
           </button>
 
           {/* CART: opens the cart drawer */}
@@ -83,7 +89,7 @@ export default function Navbar() {
       {/* Mobile Menu */}
       <div className={`mobile__menu ${menuOpen ? "show" : ""}`}>
         <div className="mobile__header">
-          <h3>SHOP.CO</h3>
+          <h3>SEEMAB</h3>
           <button className="icon close" aria-label="Close menu" onClick={closeMenu}>
             <FaTimes />
           </button>
@@ -102,13 +108,11 @@ export default function Navbar() {
         </div>
 
         <nav className="mobile__links">
-          <NavLink onClick={closeMenu} to="/women">Women</NavLink>
-          <NavLink onClick={closeMenu} to="/men">Men</NavLink>
-          <NavLink onClick={closeMenu} to="/kids">Kids</NavLink>
-          <NavLink onClick={closeMenu} to="/lawn">Lawn</NavLink>
-          <NavLink onClick={closeMenu} to="/pret">Pret</NavLink>
-          <NavLink onClick={closeMenu} to="/unstitched">Unstitched</NavLink>
-          <NavLink onClick={closeMenu} to="/footwear">Footwear</NavLink>
+          {cats.map((c) => (
+            <NavLink key={c} onClick={closeMenu} to={`/category/${toSlug(c)}`}>
+              {c.replace(/^\w/, (m) => m.toUpperCase())}
+            </NavLink>
+          ))}
         </nav>
       </div>
 

@@ -1,69 +1,75 @@
-// src/components/ProductGrid.jsx
 import React from "react";
 import { Link } from "react-router-dom";
-import { newArrivals, topSelling } from "../data/products";
 import { formatPKR } from "../utils/currency";
 import { useCart } from "../context/CartContext";
 
-/**
- * Reusable product card with:
- * - Badge (optional)
- * - Rating (optional)
- * - Price + oldPrice
- * - "Add to Cart" without navigation
- * - "View" link to details
- */
 function Card({ p }) {
   const { addItem, openCart } = useCart();
 
   const handleAdd = (e) => {
-    e.preventDefault(); // prevent navigating when button is inside a Link/card
+    e.preventDefault();
+    e.stopPropagation();
     addItem({
       id: p.id,
       title: p.title,
       price: p.price,
       image: p.image,
       qty: 1,
-      options: {}, // add size/color later if you want
     });
     openCart();
   };
 
+  // calculate discount if oldPrice exists
+  const hasDiscount = p.oldPrice && p.oldPrice > p.price;
+  const discountAmount = hasDiscount ? p.oldPrice - p.price : 0;
+  const discountPercent = hasDiscount
+    ? Math.round((discountAmount / p.oldPrice) * 100)
+    : 0;
+
   return (
-    <article className="card" aria-label={p.title}>
-      <div className="card__media">
-        <Link to={`/product/${p.id}`} className="card__link" aria-label={p.title}>
-          {/* optional badge */}
-          {p.badge && <span className="badge">{p.badge}</span>}
+    <article className="pcard" aria-label={p.title}>
+      <Link to={`/product/${p.id}`} className="pcard__media" aria-label={p.title}>
+        {hasDiscount && (
+          <div className="pcard__badge">
+            <span className="pcard__chip">SALE</span>
+            <span className="pcard__chip pcard__chip--accent">-{discountPercent}%</span>
+          </div>
+        )}
+        <img src={p.image} alt={p.title} loading="lazy" />
+      </Link>
 
-          <img src={p.image} alt={p.title} loading="lazy" />
-        </Link>
-      </div>
-
-      <div className="card__body">
-        <Link to={`/product/${p.id}`} className="card__title">
+      <div className="pcard__body">
+        <Link to={`/product/${p.id}`} className="pcard__title">
           {p.title}
         </Link>
 
-        {/* optional rating */}
         {p.rating && (
-          <div className="stars" aria-label={`Rating ${p.rating.toFixed(1)} out of 5`}>
+          <div
+            className="pcard__rating"
+            aria-label={`Rating ${p.rating.toFixed(1)} out of 5`}
+          >
             {"★".repeat(Math.round(p.rating))}
             {"☆".repeat(5 - Math.round(p.rating))}
-            <span className="stars__num">({p.rating.toFixed(1)})</span>
+            <span className="pcard__ratingNum">{p.rating.toFixed(1)}</span>
           </div>
         )}
 
-        <div className="card__price">
+        <div className="pcard__price">
           <strong>{formatPKR(p.price)}</strong>
-          {!!p.oldPrice && <span className="old">{formatPKR(p.oldPrice)}</span>}
+          {hasDiscount && <span className="pcard__old">{formatPKR(p.oldPrice)}</span>}
         </div>
 
-        <div className="card__actions">
-          <button className="btn btn--primary" onClick={handleAdd}>
+        {hasDiscount && (
+          <div className="pcard__discount">
+            Save {formatPKR(discountAmount)} ({discountPercent}%)
+          </div>
+        )}
+
+        <div className="pcard__cta">
+          <button type="button" className="pcard__btn pcard__btn--primary" onClick={handleAdd}>
             Add to Cart
           </button>
-          <Link to={`/product/${p.id}`} className="btn btn--ghost">
+          <Link to={`/product/${p.id}`} className="pcard__btn pcard__btn--ghost">
             View
           </Link>
         </div>
@@ -87,11 +93,11 @@ function Section({ id, title, products }) {
   );
 }
 
-export default function ProductGrid() {
+/*export default function ProductGrid() {
   return (
     <>
       <Section id="new-arrivals" title="New Arrivals" products={newArrivals} />
       <Section id="top-selling" title="Top Selling" products={topSelling} />
     </>
   );
-}
+}*/

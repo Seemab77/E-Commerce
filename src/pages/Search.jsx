@@ -1,73 +1,66 @@
 // src/pages/Search.jsx
-import { useMemo } from "react";
-import { useLocation, Link } from "react-router-dom";
-import { allProducts } from "../data/products"; // ← match your actual filename/casing
-
-// Small helper to read ?q=...
-const useQuery = () => new URLSearchParams(useLocation().search);
-
-// Optional PKR formatter (kept local so this file works standalone)
-const formatPKR = (n) =>
-  new Intl.NumberFormat("en-PK", {
-    style: "currency",
-    currency: "PKR",
-    maximumFractionDigits: 0,
-  }).format(n ?? 0);
-
-// How to match a product against the search term
-const matches = (p, q) => {
-  const t = (q || "").trim().toLowerCase();
-  if (!t) return false;
-  return (
-    p.title?.toLowerCase().includes(t) ||
-    p.brand?.toLowerCase().includes(t) ||
-    p.category?.toLowerCase().includes(t)
-  );
-};
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { getAllProducts } from "../lib/fakestore";
+import { formatPKR } from "../utils/currency";
+import { useCart } from "../context/CartContext";
 
 export default function Search() {
-  const query = useQuery();
-  const q = query.get("q") || "";
+  const [searchParams] = useSearchParams();
+  const q = (searchParams.get("q") || "").trim().toLowerCase();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { addItem, openCart } = useCart();
 
-  // Filter once per query change
-  const results = useMemo(
-    () => allProducts.filter((p) => matches(p, q)),
-    [q]
-  );
+  useEffect(() => {
+    setLoading(true);
+    getAllProducts()
+      .then(setProducts)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const results = useMemo(() => {
+    if (!q) return [];
+    return products.filter((p) => {
+      return (
+        p.title.toLowerCase().includes(q) ||
+        p.category?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q)
+      );
+    });
+  }, [products, q]);
+
+  const handleAdd = (p) => {
+    addItem({ id: p.id, title: p.title, price: p.price, image: p.image, qty: 1 });
+    openCart();
+  };
 
   return (
-    <div className="section container">
-      <h2 style={{ marginBottom: 8 }}>
-        Search results for: <em>“{q}”</em>
-      </h2>
-      <p style={{ color: "#64748b", marginBottom: 16 }}>
-        {results.length} item{results.length !== 1 ? "s" : ""} found
-      </p>
+    <div className="container section">
+      <h1 className="section__title">Search: “{q || "…"}”</h1>
+      {loading && <p>Loading…</p>}
+      {!loading && !results.length && <p>No results.</p>}
 
-      {q.trim() === "" ? (
-        <p>Type in the search bar and press Enter.</p>
-      ) : results.length === 0 ? (
-        <p>No products matched your search.</p>
-      ) : (
-        <div className="grid">
-          {results.map((p) => (
-            <article key={p.id} className="card">
-              <Link to={`/product/${p.id}`} className="card__link">
-                <img src={p.image} alt={p.title} loading="lazy" />
-                <div className="card__body">
-                  <h4 className="card__title">{p.title}</h4>
-                  <div className="card__price">
-                    <strong>{formatPKR(p.price)}</strong>
-                    {p.oldPrice && (
-                      <span className="old">{formatPKR(p.oldPrice)}</span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            </article>
-          ))}
-        </div>
-      )}
+      <div className="grid">
+        {results.map((p) => (
+          <article key={p.id} className="card">
+            <Link to={`/product/${p.id}`} className="card__link">
+              <img src={p.image} alt={p.title} loading="lazy" />
+            </Link>
+            <div className="card__body">
+              <Link to={`/product/${p.id}`} className="card__title">{p.title}</Link>
+              <div className="card__price">
+                <strong>{formatPKR(p.price)}</strong>
+                {p.oldPrice && <span className="old">{formatPKR(p.oldPrice)}</span>}
+              </div>
+              <div className="card__actions">
+                <button className="btn btn--primary" onClick={() => handleAdd(p)}>Add to Cart</button>
+                <Link to={`/product/${p.id}`} className="btn btn--ghost">View</Link>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

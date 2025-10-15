@@ -2,9 +2,9 @@
 import React, { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import Hero from "../components/Hero";
-import BrandsStrip from "../components/BrandsStrip";
+import RandomProducts from "../components/RandomProduct";
 import ProductGrid from "../components/ProductGrid";
-import { products } from "../data/products";
+
 
 export default function Home() {
   const location = useLocation();
@@ -23,8 +23,9 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <BrandsStrip />
-      <ProductGrid />
+      {/* Random picks from Fake Store */}
+      <RandomProducts title="Random picks for you" count={8} />
+
     </>
   );
 }
