@@ -1220,12 +1220,13 @@ img {
 /* Make ghost button subtle but visible */
 .btn.btn--ghost {
   border: 1px solid #e5e7eb;
+  color: #0f172a;
   background: #fff;
 }
 
 .btn.btn--ghost:hover {
   border-color: #cbd5e1;
-  background: #f9fafb;
+  background: #cbd5e1;
 }
 
 /* Tweak primary for cards (optional) */
