@@ -1391,3 +1391,34 @@ img {
   color: #333;
   margin-bottom: 20px;
 }
+
+.footer {
+  text-align: center;
+  padding: 2rem 0;
+  color: #1e293b;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 2rem;
+  background: #fafafa;
+}
+
+.footer__brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.03em;
+}
+
+.footer__tagline {
+  color: #64748b;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.footer__links a {
+  margin: 0 6px;
+  color: #334155;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.footer__links a:hover {
+  text-decoration: underline;
+}
