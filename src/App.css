@@ -1150,6 +1150,7 @@ img {
   text-decoration: none;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   /* clamp to 2 lines */
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -1247,4 +1248,146 @@ img {
 
 .error {
   color: #b91c1c;
+}
+
+/* Card container style */
+.product-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background-color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* Hover effect for the product cards */
+.product-card:hover {
+  transform: translateY(-5px);
+  /* Lift effect */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Style for product image */
+.product-card img {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  border-radius: 12px 12px 0 0;
+  transition: transform 0.3s ease;
+}
+
+/* Hover effect for image */
+.product-card:hover img {
+  transform: scale(1.05);
+  /* Zoom effect */
+}
+
+/* Product details section */
+.product-details {
+  padding: 16px;
+  text-align: center;
+  flex-grow: 1;
+}
+
+/* Title style */
+.product-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+/* Price and discount styling */
+.product-price {
+  font-size: 1.2rem;
+  color: #ff5722;
+  /* Orange for price */
+  font-weight: 600;
+}
+
+.old-price {
+  text-decoration: line-through;
+  color: #888;
+  margin-left: 8px;
+}
+
+.save-amount {
+  font-size: 0.9rem;
+  color: #4caf50;
+  /* Green color for savings */
+  margin-top: 4px;
+}
+
+/* Rating stars */
+.product-rating {
+  margin-top: 6px;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+}
+
+.product-rating span {
+  color: #ff9800;
+  /* Golden color for filled stars */
+}
+
+/* Buttons section */
+.product-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* Button styles */
+.product-buttons button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Add to Cart button */
+.product-buttons .btn-add-to-cart {
+  background-color: #ff5722;
+  color: white;
+}
+
+/* Hover effect for Add to Cart */
+.product-buttons .btn-add-to-cart:hover {
+  background-color: #e64a19;
+}
+
+/* View button */
+.product-buttons .btn-view {
+  background-color: transparent;
+  color: #333;
+  border: 2px solid #ff5722;
+}
+
+/* Hover effect for View */
+.product-buttons .btn-view:hover {
+  background-color: #ff5722;
+  color: white;
+}
+
+/* Grid layout for product items */
+.products-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+/* Section title style */
+.section-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
 }
